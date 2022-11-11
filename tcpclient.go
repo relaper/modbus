@@ -168,8 +168,8 @@ func (mb *tcpTransporter) Send(aduRequest []byte) (aduResponse []byte, err error
 	mb.logf("modbus: sending % x", aduRequest)
 	if _, err = mb.conn.Write(aduRequest); err != nil {
 		if netError, ok := err.(net.Error); ok && netError.Timeout() == false {
-                        mb.close()
-                }
+			mb.close()
+		}
 		return
 	}
 	// Read header first
@@ -215,6 +215,15 @@ func (mb *tcpTransporter) connect() error {
 		if err != nil {
 			return err
 		}
+		// See: https://madflojo.medium.com/keeping-tcp-connections-alive-in-golang-801a78b7cf1
+		tc := conn.(*net.TCPConn)
+		if err := tc.SetKeepAlive(true); err != nil {
+			mb.logf("set keepalive failed: %s\n", mb.Address)
+		}
+		if err := tc.SetKeepAlivePeriod(30 * time.Second); err != nil {
+			mb.logf("set keepalive period failed: %s", mb.Address)
+		}
+
 		mb.conn = conn
 	}
 	return nil
